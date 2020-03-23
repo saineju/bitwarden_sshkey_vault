@@ -74,7 +74,7 @@ function generate_key() {
 }
 
 function list_keys() {
-  bw list items --search ${key_prefix}|jq .[].name
+  bw list items --search ${key_prefix}|jq '[.[] | "\(.name) (\(.id))"]'
 }
 
 function get_item() {
