@@ -11,12 +11,14 @@ nc='\033[0m'
 
 function help() {
   echo "Usage: $0 <list|generate|get_key|get_public_key> [-k key_name] [-t ttl] [-e encryption_type]"
-  echo -e "\tlist\tList keys in vault"
+  echo -e "\tlist\t\tList keys in vault"
+  echo -e "\tsearch\t\tSearch for key name, useful if there are more than one matches"
   echo -e "\tgenerate\tGenerate new key to vault"
   echo -e "\tget_key\t\tGet private key to ssh-agent"
   echo -e "\tget_public_key\tget public key for the specified key"
   echo -e "\t-k|--key-name\tName for key, required for generating key or getting the key"
-  echo -e "\t-i|-id\t\tUse key ID to fetch the key"
+  echo -e "\t-i|--id\t\tUse key ID to fetch the key"
+  echo -e "\t-n|--no-prefix\tDo not add key prefix"
   echo -e "\t-t|--ttl\tHow long private key should exist in agent, uses ssh-agent ttl syntax"
   echo -e "\t-e|--key-enc\tKey type, accepts rsa or ed25519"
   echo -e "\tAll required parameters will be asked unless specified with switch"
@@ -77,6 +79,16 @@ function list_keys() {
   bw list items --search ${key_prefix}|jq '[.[] | "\(.name) (\(.id))"]'
 }
 
+function search() {
+  if [ -n "${key_id}" ]; then
+    key_name="${key_id}"
+  elif [ -z "${key_name}" ]; then
+    echo -n "Enter searched key name: "
+    read key_name
+  fi
+  bw list items --search "${key_name}"|jq '[.[] | "\(.name) (\(.id))"]'
+}
+
 function get_item() {
   if [ -n "${key_id}" ]; then
     key_name="${key_id}"
@@ -84,16 +96,16 @@ function get_item() {
     echo -n "Enter searched key name: "
     read key_name
   fi
-  if [ -z "${key_id}" ]; then
+  if [ -z "${no_prefix}" ]; then
     key_name=${key_name#"$key_prefix"}
     key_name="${key_prefix}${key_name}"
   fi
-  result=$(bw get item ${key_name})
+  result=$(bw get item "${key_name}")
   if [ $? == 0 ]; then
     return
   else
     echo "You need to be more specific on the key name, the key you entered matches this list:"
-    bw list items --search ${key_name}|jq .[].name
+    bw list items --search "${key_name}"|jq .[].name
   fi
 
 }
@@ -121,7 +133,12 @@ while [[ $# -gt 0 ]]
       ;;
       -i|-id)
         key_id="$2"
+        no_prefix=true
         shift
+        shift
+      ;;
+      -n|--no-prefix)
+        no_prefix=true
         shift
       ;;
       -t|--ttl)
@@ -154,6 +171,10 @@ while [[ $# -gt 0 ]]
         generate=true
         shift
       ;;
+      search)
+        search=true
+        shift
+      ;;
       *)
         echo "Unrecognized param: $1"
         shift
@@ -184,5 +205,7 @@ elif [ "${get_key}" == "true" ]; then
   echo ${result}|jq -r '.notes'|grep -Ev "ssh-(rsa|ed25519)"|ssh-add -t ${ttl} -
 elif [ "${get_public_key}" == "true" ]; then
   get_item
-  echo $result|jq -r '.notes'|grep -E "ssh-(rsa|ed25519)"
+  echo ${result}|jq -r '.notes'|grep -E "ssh-(rsa|ed25519)"
+elif [ "${search}" == "true" ]; then
+  search
 fi

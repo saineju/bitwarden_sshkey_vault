@@ -19,12 +19,14 @@ To use this you will need to have following packages installed
 
 ```
 Usage: ./bw_ssh_key.sh <list|generate|get_key|get_public_key> [-k key_name] [-t ttl] [-e encryption_type]
-	list	List keys in vault
+	list		List keys in vault
+	search		Search for key name, useful if there are more than one matches
 	generate	Generate new key to vault
-	get_key	        Get private key to ssh-agent
+	get_key		Get private key to ssh-agent
 	get_public_key	get public key for the specified key
 	-k|--key-name	Name for key, required for generating key or getting the key
-	-i|-id		Use key ID to fetch the key
+	-i|--id		Use key ID to fetch the key
+	-n|--no-prefix	Do not add key prefix (used for fetching keys from entries not added with this tool)
 	-t|--ttl	How long private key should exist in agent, uses ssh-agent ttl syntax
 	-e|--key-enc	Key type, accepts rsa or ed25519
 	All required parameters will be asked unless specified with switch
@@ -57,6 +59,9 @@ The script currently allows for
 * listing keys in the vault
   Lists all entries in the vault that begin with the prefix `bw_ssh_`
 
+* searching for keys
+  Searches for keys based on key_name, useful if you have several similarly named keys. Will output both key name and key id. Search is case insensitive.
+
 ### Login / unlock
 
 If you're using bitwarden cli for the first time on your machine the script will attempt to do a `login` -action when it is run for the first time.
@@ -69,4 +74,4 @@ to ensure that all keys are available.
 When fetching keys from the vault, the script does a `get` action and that requires that the key name is unique enough. This means that if you have keys
 `my_key` and `my_key2`, you can fetch `my_key2`, but fetching `my_key` will fail due to the fact that the search for it will find two entries for `my_key`
 As a workaround, you should attempt to use names that will not collide like that. If you do have two colliding keys, you can always use the key ID to 
-fetch the key, but you need to know which ID is the correct one.
+fetch the key (use list or search to check the key ID)
